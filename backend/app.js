@@ -13,6 +13,7 @@ const cookieParser = require("cookie-parser");
 const {AuthAcc} = require("./middleware/valideAcc.js");
 const bcrypt = require("bcrypt");
 require('dotenv').config();
+const mailChanger = require("./models/VERIFY.js")
 const nodemailer = require("nodemailer");
 const Vcode = require("./models/auth.js")
 const mailBody = require("./templates/verification.js") ;
@@ -211,7 +212,7 @@ app.post("/Login",async(req,res)=>{
                   
             }
             else if (info.AcStats === "Pending") {
-                res.send(`<p>This account is on Pending Stat Please Verify The Account first
+                res.json(`<p>This account is on Pending Stat Please Verify The Account first
                     The Link Only Stays for 30 min ! 
                     </p>`)
             }
@@ -528,20 +529,8 @@ app.use(Notify)
 
 //Update --- false auth to cheking
 app.get("/About-Us",(req,res)=>{
-    const Token = req.cookies.anipub;
-    if(Token){
-        jwt.verify(Token,"I Am Naruto",(err,data)=>{
-            if(err){
-                console.log(err)
-            }
-            const userInfo = {ID:data.id};
-           
-             res.render("About-Us",{SectionName:"About Us Section", Auth:true,userInfo});
+    res.render("About-Us");
 
-        })
-    }else{
-    res.render("About-Us",{SectionName:"About Us Section",Auth:false});
-}
 })
 
 app.get("/Privacy-Policy",(req,res)=>{
@@ -721,7 +710,7 @@ app.post("/update/ext",validAdmin,async (req,res)=>{
 
 })
 
-app.post("/Bulk/Add",async(req,res)=>{
+app.post("/Bulk/Add",validAdmin,async(req,res)=>{
     const ID = req.body.ID;
     const ARY = req.body.ARY;
 const Yo = await   AnimeDB.bulkWrite([
@@ -748,20 +737,37 @@ else {
 
 // give myself Admin Permission 
 
-app.get("/AdminMake",AuthAcc,(req,res)=>{
+app.get("/AdminMake",(req,res)=>{
     Data.find({"Email":"abdullahal467bp@gmail.com"})
     .then(info=>{
-        if(info.userType === "Admin") {
-            Data.findOneAndUpdate({"Email":"abdullahal467bp@gmail.com"},{"userType":"Admin"})
+
+            Data.findOneAndUpdate({"Email":"abdullahal467bp@gmail.com"},{"AcStats":"Active"})
                 .then(info=>{
                     res.redirect("/Home");
                 })
-        }
-        else {
-            res.redirect("/Home")
-        }
+
     })
   
 })
-
-
+app.get("/verify-email-change/:id/:code",(req,res)=>{
+    const ID = req.params.id;
+    const code = req.params.code;
+    mailChanger.findById(ID)
+    .then(info=>{
+        if(info && info.CODEV === code) {
+               Data.findByIdAndUpdate(ID,{"AcStats":"Active"})
+                .then(ishq=>{
+                    if(ishq) {
+                        Data.findByIdAndUpdate(ID,{"Email":info.newmail})
+                        .then(hein=>{
+                            console.log("Email Changed")
+                            res.json("Bruh Account Got Verified now go to login page ! hehe")
+                        })
+                    }
+                })
+        }
+        else {
+            res.json("Are You Sure ? ")
+        }
+    })
+})
